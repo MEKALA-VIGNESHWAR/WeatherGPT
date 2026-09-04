@@ -112,15 +112,20 @@ class OpenMeteoProvider(BaseWeatherProvider):
         curr_time_str = curr.get("time", "")  # e.g., "2026-09-04T18:00"
         
         start_idx = 0
-        if curr_time_str and curr_time_str in all_times:
-            start_idx = all_times.index(curr_time_str)
-        elif all_times:
-            # Fallback: match by date and current hour
-            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
+        if curr_time_str and all_times:
+            # Match by hour prefix from Open-Meteo local time (e.g. "2026-09-04T18")
+            target_hour = curr_time_str[:13]
+            found = False
             for idx, t in enumerate(all_times):
-                if t.startswith(now_iso) or t >= now_iso:
+                if t.startswith(target_hour):
                     start_idx = idx
+                    found = True
                     break
+            if not found:
+                for idx, t in enumerate(all_times):
+                    if t >= target_hour:
+                        start_idx = idx
+                        break
 
         times = all_times[start_idx : start_idx + 24]
         temps = hourly.get("temperature_2m", [])[start_idx : start_idx + 24]
