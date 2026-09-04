@@ -1,0 +1,22 @@
+{
+  "bulletin_number": "BOB/03/2026",
+  "issuer": "Cyclone Warning Division, IMD New Delhi",
+  "issued_at": "2026-09-04T12:00:00Z",
+  "system": "Cyclonic Storm over Westcentral Bay of Bengal",
+  "center_coordinates": {
+    "latitude": 18.2,
+    "longitude": 85.4
+  },
+  "maximum_sustained_wind_kmh": 75,
+  "gusting_kmh": 90,
+  "warnings": [
+    {
+      "sector": "Fishermen",
+      "instruction": "Total suspension of fishing operations over Westcentral and Northwest Bay of Bengal."
+    },
+    {
+      "sector": "Ports",
+      "instruction": "Distant Cautionary Signal No. 1 hoisted at Visakhapatnam and Paradip ports."
+    }
+  ]
+}

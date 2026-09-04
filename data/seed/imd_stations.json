@@ -1,0 +1,10 @@
+[
+  {"station_id": "IMD-43128", "name": "Hyderabad (Begumpet)", "state": "Telangana", "latitude": 17.4531, "longitude": 78.4676, "elevation_m": 531},
+  {"station_id": "IMD-43185", "name": "Amaravati", "state": "Andhra Pradesh", "latitude": 16.5417, "longitude": 80.5158, "elevation_m": 24},
+  {"station_id": "IMD-43110", "name": "Visakhapatnam (Dolphin's Nose)", "state": "Andhra Pradesh", "latitude": 17.6868, "longitude": 83.2185, "elevation_m": 5},
+  {"station_id": "IMD-43295", "name": "Bengaluru (HAL Airport)", "state": "Karnataka", "latitude": 12.9716, "longitude": 77.5946, "elevation_m": 920},
+  {"station_id": "IMD-43279", "name": "Chennai (Meenambakkam)", "state": "Tamil Nadu", "latitude": 13.0827, "longitude": 80.2707, "elevation_m": 16},
+  {"station_id": "IMD-43003", "name": "Mumbai (Santacruz)", "state": "Maharashtra", "latitude": 19.0760, "longitude": 72.8777, "elevation_m": 14},
+  {"station_id": "IMD-42182", "name": "New Delhi (Safdarjung)", "state": "Delhi", "latitude": 28.6139, "longitude": 77.2090, "elevation_m": 216},
+  {"station_id": "IMD-42809", "name": "Kolkata (Alipore)", "state": "West Bengal", "latitude": 22.5726, "longitude": 88.3639, "elevation_m": 9}
+]

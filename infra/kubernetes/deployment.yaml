@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weathergpt-backend
+  labels:
+    app: weathergpt-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weathergpt-backend
+  template:
+    metadata:
+      labels:
+        app: weathergpt-backend
+    spec:
+      containers:
+      - name: backend
+        image: weathergpt-backend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef:
+            name: weathergpt-config
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: weathergpt-frontend
+  labels:
+    app: weathergpt-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: weathergpt-frontend
+  template:
+    metadata:
+      labels:
+        app: weathergpt-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: weathergpt-frontend:latest
+        ports:
+        - containerPort: 80

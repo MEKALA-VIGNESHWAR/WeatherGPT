@@ -1,0 +1,8 @@
+{
+  "region": "Telangana & Rayalaseema",
+  "period": "Monsoon Season 2026",
+  "weekly_departure_pct": [12.4, -4.2, 28.5, 5.1],
+  "cumulative_rainfall_mm": 612.4,
+  "normal_rainfall_mm": 540.2,
+  "status": "ABOVE_NORMAL"
+}

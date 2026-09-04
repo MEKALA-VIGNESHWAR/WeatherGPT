@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: weathergpt-config
+data:
+  ENVIRONMENT: "production"
+  DEFAULT_WEATHER_PROVIDER: "open_meteo"
+  DEMO_MODE: "false"
+  WEATHER_CACHE_TTL_SECONDS: "600"
+  FORECAST_CACHE_TTL_SECONDS: "1800"
