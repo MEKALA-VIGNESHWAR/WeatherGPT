@@ -92,3 +92,20 @@ class CachedWeatherRecord(Base):
     observed_at = Column(DateTime, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class AdvisoryRecord(Base):
+    __tablename__ = "advisory_records"
+    
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    location = Column(String(255), nullable=False)
+    sector = Column(String(50), nullable=False)
+    crop = Column(String(50), nullable=True)
+    title = Column(String(255), nullable=False)
+    recommendation = Column(String(100), nullable=False)
+    risk_level = Column(String(20), nullable=False)
+    risk_score = Column(Float, nullable=True)
+    forecast_data = Column(JSON, nullable=False)
+    valid_until = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+

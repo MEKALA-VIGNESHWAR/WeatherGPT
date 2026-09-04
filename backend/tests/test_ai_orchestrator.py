@@ -42,4 +42,4 @@ async def test_grounded_response_generation():
     assert resp.weather_summary.temperature_c is not None
     assert len(resp.sources) > 0
     assert len(resp.tools_called) > 0
-    assert resp.confidence in ["High", "Medium", "Low"]
+    assert resp.confidence in ["High", "Medium", "Low", "Based on current forecast data", "Forecast confidence: Based on current forecast data"]

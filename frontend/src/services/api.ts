@@ -50,8 +50,8 @@ export async function reverseGeocodeLocation(lat: number, lon: number) {
   return res.json();
 }
 
-export async function fetchSectorAdvisories(sector: string, lat: number, lon: number, crop: string = 'paddy'): Promise<SectorAdvisoryResponse> {
-  const res = await fetch(`${API_BASE}/advisories?sector=${sector}&latitude=${lat}&longitude=${lon}&crop=${crop}`);
+export async function fetchSectorAdvisories(sector: string, lat: number, lon: number, crop: string = 'paddy', horizonDays: number = 1): Promise<SectorAdvisoryResponse> {
+  const res = await fetch(`${API_BASE}/advisories?sector=${sector}&latitude=${lat}&longitude=${lon}&crop=${crop}&horizon_days=${horizonDays}`);
   if (!res.ok) throw new Error('Failed to fetch advisories');
   return res.json();
 }

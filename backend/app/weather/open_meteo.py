@@ -21,15 +21,22 @@ WMO_WEATHER_MAP = {
     51: ("Light drizzle", "🌦️"),
     53: ("Moderate drizzle", "🌦️"),
     55: ("Dense drizzle", "🌧️"),
+    56: ("Light freezing drizzle", "🌧️"),
+    57: ("Dense freezing drizzle", "🌧️"),
     61: ("Slight rain", "🌦️"),
     63: ("Moderate rain", "🌧️"),
     65: ("Heavy rain", "🌧️"),
+    66: ("Light freezing rain", "🌧️"),
+    67: ("Heavy freezing rain", "🌧️"),
     71: ("Slight snowfall", "🌨️"),
     73: ("Moderate snowfall", "🌨️"),
     75: ("Heavy snowfall", "❄️"),
+    77: ("Snow grains", "❄️"),
     80: ("Slight rain showers", "🌦️"),
     81: ("Moderate rain showers", "🌧️"),
     82: ("Violent rain showers", "⛈️"),
+    85: ("Slight snow showers", "🌨️"),
+    86: ("Heavy snow showers", "❄️"),
     95: ("Thunderstorm", "⛈️"),
     96: ("Thunderstorm with slight hail", "⛈️"),
     99: ("Thunderstorm with heavy hail", "⛈️"),
@@ -61,15 +68,17 @@ class OpenMeteoProvider(BaseWeatherProvider):
         params = {
             "latitude": latitude,
             "longitude": longitude,
-            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
-            "hourly": "temperature_2m,relative_humidity_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m",
-            "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,sunrise,sunset",
+            "current": "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,snowfall,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m",
+            "hourly": "temperature_2m,apparent_temperature,relative_humidity_2m,precipitation_probability,precipitation,rain,weather_code,cloud_cover,wind_speed_10m",
+            "daily": "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,rain_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,uv_index_max,sunrise,sunset",
             "timezone": "auto",
             "forecast_days": min(max(days, 1), 16)
         }
         
+        logger.info(f"OPEN-METEO REQUEST: lat={latitude}, lon={longitude}, days={days}")
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.get(self.base_url, params=params)
+            logger.info(f"OPEN-METEO RESPONSE STATUS: {resp.status_code}")
             resp.raise_for_status()
             data = resp.json()
 
@@ -95,6 +104,10 @@ class OpenMeteoProvider(BaseWeatherProvider):
             wind_direction_deg=int(curr.get("wind_direction_10m", 0)),
             wind_gusts_kmh=round(curr.get("wind_gusts_10m", 12.0), 1),
             precipitation_mm=round(curr.get("precipitation", 0.0), 1),
+            rain_mm=round(curr.get("rain", 0.0), 1),
+            showers_mm=round(curr.get("showers", 0.0), 1),
+            snowfall_cm=round(curr.get("snowfall", 0.0), 1),
+            cloud_cover_pct=int(curr.get("cloud_cover", 0)),
             precipitation_probability_pct=precip_prob_max,
             surface_pressure_hpa=round(curr.get("surface_pressure", 1013.25), 1),
             visibility_km=10.0,
@@ -106,22 +119,19 @@ class OpenMeteoProvider(BaseWeatherProvider):
             sunset=sunset
         )
 
-        # Build 24 hours of forecast starting from current hour
+        # Build hours of forecast starting from current hour
         hourly_points: List[HourlyForecastPoint] = []
         all_times = hourly.get("time", [])
-        curr_time_str = curr.get("time", "")  # e.g., "2026-09-04T18:00"
+        curr_time_str = curr.get("time", "")
         
         start_idx = 0
         if curr_time_str and all_times:
-            # Match by hour prefix from Open-Meteo local time (e.g. "2026-09-04T18")
             target_hour = curr_time_str[:13]
-            found = False
             for idx, t in enumerate(all_times):
                 if t.startswith(target_hour):
                     start_idx = idx
-                    found = True
                     break
-            if not found:
+            else:
                 for idx, t in enumerate(all_times):
                     if t >= target_hour:
                         start_idx = idx
@@ -129,9 +139,12 @@ class OpenMeteoProvider(BaseWeatherProvider):
 
         times = all_times[start_idx:]
         temps = hourly.get("temperature_2m", [])[start_idx:]
+        app_temps = hourly.get("apparent_temperature", [])[start_idx:]
         humids = hourly.get("relative_humidity_2m", [])[start_idx:]
         probs = hourly.get("precipitation_probability", [])[start_idx:]
         precips = hourly.get("precipitation", [])[start_idx:]
+        rains = hourly.get("rain", [])[start_idx:]
+        clouds = hourly.get("cloud_cover", [])[start_idx:]
         winds = hourly.get("wind_speed_10m", [])[start_idx:]
         codes = hourly.get("weather_code", [])[start_idx:]
 
@@ -141,9 +154,12 @@ class OpenMeteoProvider(BaseWeatherProvider):
                 HourlyForecastPoint(
                     time=times[i],
                     temperature_c=round(temps[i], 1) if i < len(temps) else 25.0,
+                    apparent_temperature_c=round(app_temps[i], 1) if i < len(app_temps) else None,
                     relative_humidity_pct=int(humids[i]) if i < len(humids) else 50,
                     precipitation_probability_pct=int(probs[i]) if i < len(probs) else 0,
                     precipitation_mm=round(precips[i], 1) if i < len(precips) else 0.0,
+                    rain_mm=round(rains[i], 1) if i < len(rains) else None,
+                    cloud_cover_pct=int(clouds[i]) if i < len(clouds) else None,
                     wind_speed_kmh=round(winds[i], 1) if i < len(winds) else 10.0,
                     weather_code=codes[i] if i < len(codes) else 0,
                     weather_condition=c_text,
@@ -158,7 +174,9 @@ class OpenMeteoProvider(BaseWeatherProvider):
         d_min = daily.get("temperature_2m_min", [])
         d_prob = daily.get("precipitation_probability_max", [])
         d_rain = daily.get("precipitation_sum", [])
+        d_rain_sum = daily.get("rain_sum", [])
         d_wind = daily.get("wind_speed_10m_max", [])
+        d_gusts = daily.get("wind_gusts_10m_max", [])
         d_code = daily.get("weather_code", [])
         d_sunr = daily.get("sunrise", [])
         d_suns = daily.get("sunset", [])
@@ -173,12 +191,14 @@ class OpenMeteoProvider(BaseWeatherProvider):
                     temperature_min_c=round(d_min[i], 1) if i < len(d_min) else 20.0,
                     precipitation_probability_max_pct=int(d_prob[i]) if i < len(d_prob) else 0,
                     precipitation_sum_mm=round(d_rain[i], 1) if i < len(d_rain) else 0.0,
-                    wind_speed_max_kmh=round(d_wind[i], 1) if i < len(d_wind) else 10.0,
+                    rain_sum_mm=round(d_rain_sum[i], 1) if i < len(d_rain_sum) else None,
+                    wind_speed_max_kmh=round(d_wind[i], 1) if i < len(d_wind) else 15.0,
+                    wind_gusts_max_kmh=round(d_gusts[i], 1) if i < len(d_gusts) else None,
                     weather_code=d_code[i] if i < len(d_code) else 0,
                     weather_condition=c_text,
                     weather_icon=c_icon,
-                    sunrise=d_sunr[i] if i < len(d_sunr) else "06:00",
-                    sunset=d_suns[i] if i < len(d_suns) else "18:30",
+                    sunrise=d_sunr[i].split("T")[1] if i < len(d_sunr) and "T" in d_sunr[i] else (d_sunr[i] if i < len(d_sunr) else "06:00"),
+                    sunset=d_suns[i].split("T")[1] if i < len(d_suns) and "T" in d_suns[i] else (d_suns[i] if i < len(d_suns) else "18:30"),
                     uv_index_max=round(d_uv[i], 1) if i < len(d_uv) else 5.0
                 )
             )

@@ -55,7 +55,7 @@ class ChatResponse(BaseModel):
     answer: str
     location: str
     time_range: str
-    weather_summary: WeatherSummary
+    weather_summary: Optional[WeatherSummary] = None
     risk_level: RiskLevel
     advisories: List[AdvisoryItem] = []
     warnings: List[WeatherAlert] = []

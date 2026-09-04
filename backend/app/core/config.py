@@ -39,9 +39,11 @@ class Settings(BaseSettings):
     FORECAST_CACHE_TTL_SECONDS: int = 1800 # 30 minutes
     
     # LLM Configuration
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-4o-mini"
-    LLM_PROVIDER: str = "openai"  # "openai" or "mock" / "rule_based"
+    LLM_PROVIDER: str = "gemini"  # "gemini" | "openai" | "rule_based"
     
     # Weather APIs
     DEFAULT_WEATHER_PROVIDER: str = "open_meteo"  # open_meteo | imd | gfs | wrf | mock
@@ -55,7 +57,7 @@ class Settings(BaseSettings):
     TTS_PROVIDER: str = "browser"  # browser | gtts | open_tts
     
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=[".env", "../.env"],
         env_file_encoding="utf-8",
         extra="ignore"
     )

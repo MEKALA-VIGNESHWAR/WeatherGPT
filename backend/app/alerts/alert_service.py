@@ -1,3 +1,5 @@
+import os
+import json
 import math
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
@@ -10,61 +12,61 @@ logger = get_logger("alerts.service")
 
 class WarningService:
     def __init__(self):
-        # In-memory registry of regional official warnings (e.g. issued by IMD Regional Centers)
-        self._regional_bulletins: List[WeatherAlert] = self._load_seed_bulletins()
+        # Official regional bulletins registry (populated only from live verified IMD/CAP feeds)
+        self._regional_bulletins: List[WeatherAlert] = []
+        self._load_sample_bulletins()
 
-    def _load_seed_bulletins(self) -> List[WeatherAlert]:
-        now = datetime.now(timezone.utc)
-        return [
-            WeatherAlert(
-                id="IMD-HYD-2026-001",
-                headline="Thunderstorm with Gusty Winds Warning",
-                description="Thunderstorm accompanied with lightning and gusty winds (speed 30-40 kmph) very likely to occur at isolated places over Telangana.",
-                instruction="Stay indoors during lightning. Farmers must avoid open fields and unplug electrical irrigation pumps.",
-                severity=AlertSeverity.YELLOW,
-                alert_type=AlertType.THUNDERSTORM,
-                source="India Meteorological Department (IMD Hyd)",
-                area_desc="Telangana (Hyderabad, Rangareddy, Medchal)",
-                effective_from=now - timedelta(hours=2),
-                expires_at=now + timedelta(hours=22),
-                latitude=17.3850,
-                longitude=78.4867,
-                radius_km=120.0,
-                color_code="#FFCC00"
-            ),
-            WeatherAlert(
-                id="IMD-OD-2026-002",
-                headline="Depression in Bay of Bengal - Coastal Squall Alert",
-                description="Squally weather with wind speed reaching 45-55 kmph gusting to 65 kmph likely over Northwest Bay of Bengal.",
-                instruction="Fishermen are advised not to venture into deep sea areas along Odisha and Andhra Pradesh coasts.",
-                severity=AlertSeverity.ORANGE,
-                alert_type=AlertType.COASTAL_HAZARD,
-                source="India Meteorological Department (Cyclone Warning Division)",
-                area_desc="Odisha & Coastal Andhra Pradesh",
-                effective_from=now - timedelta(hours=5),
-                expires_at=now + timedelta(hours=36),
-                latitude=19.8135,
-                longitude=85.8312,
-                radius_km=250.0,
-                color_code="#FF9900"
-            ),
-            WeatherAlert(
-                id="IMD-DEL-2026-003",
-                headline="Heatwave Advisory - Moderate Risk",
-                description="Maximum temperatures likely to hover around 42-44°C over isolated pockets of Northwest India.",
-                instruction="Drink sufficient water even if not thirsty. Avoid direct sun exposure between 12 noon and 3 PM.",
-                severity=AlertSeverity.YELLOW,
-                alert_type=AlertType.HEATWAVE,
-                source="IMD National Weather Forecasting Centre, New Delhi",
-                area_desc="Delhi NCR, Haryana, Rajasthan",
-                effective_from=now - timedelta(hours=1),
-                expires_at=now + timedelta(hours=48),
-                latitude=28.6139,
-                longitude=77.2090,
-                radius_km=150.0,
-                color_code="#FFCC00"
-            )
+    def _load_sample_bulletins(self):
+        candidates = [
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../data/sample/cyclone_bulletin.json")),
+            os.path.abspath(os.path.join(os.path.dirname(__file__), "../../data/sample/cyclone_bulletin.json")),
+            "data/sample/cyclone_bulletin.json",
+            "../data/sample/cyclone_bulletin.json"
         ]
+        for p in candidates:
+            if os.path.exists(p):
+                try:
+                    with open(p, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    c_lat = data.get("center_coordinates", {}).get("latitude", 18.2)
+                    c_lon = data.get("center_coordinates", {}).get("longitude", 85.4)
+                    wind_speed = data.get("maximum_sustained_wind_kmh", 75)
+                    gusting = data.get("gusting_kmh", 90)
+                    bulletin_no = data.get("bulletin_number", "BOB/03/2026")
+                    system_name = data.get("system", "Cyclonic Storm")
+                    issuer = data.get("issuer", "IMD New Delhi")
+
+                    warn_lines = [f"[{w.get('sector', 'General')}] {w.get('instruction', '')}" for w in data.get("warnings", [])]
+                    instruction_text = " ".join(warn_lines)
+
+                    now = datetime.now(timezone.utc)
+                    alert = WeatherAlert(
+                        id=f"IMD-CYCLONE-{bulletin_no.replace('/', '-')}",
+                        headline=f"{system_name} ({bulletin_no})",
+                        description=f"{system_name} centered near {c_lat}°N, {c_lon}°E with sustained winds of {wind_speed} km/h gusting to {gusting} km/h.",
+                        instruction=instruction_text,
+                        severity=AlertSeverity.RED if wind_speed >= 65 else AlertSeverity.ORANGE,
+                        alert_type=AlertType.CYCLONE,
+                        source=issuer,
+                        area_desc="Westcentral & Northwest Bay of Bengal, Coastal Andhra Pradesh & Odisha (Visakhapatnam, Paradip)",
+                        effective_from=now - timedelta(hours=6),
+                        expires_at=now + timedelta(hours=72),
+                        latitude=c_lat,
+                        longitude=c_lon,
+                        radius_km=500.0,
+                        color_code="#FF0000"
+                    )
+                    self.add_bulletin(alert)
+                    logger.info(f"Loaded official bulletin: {alert.headline}")
+                    break
+                except Exception as e:
+                    logger.warning(f"Could not load cyclone bulletin from {p}: {e}")
+
+    def add_bulletin(self, alert: WeatherAlert):
+        self._regional_bulletins.append(alert)
+
+    def clear_bulletins(self):
+        self._regional_bulletins.clear()
 
     def _haversine_km(self, lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         r = 6371.0

@@ -137,22 +137,4 @@ class MockProvider(BaseWeatherProvider):
         }
 
     async def get_alerts(self, latitude: float, longitude: float) -> List[WeatherAlert]:
-        now = datetime.now(timezone.utc)
-        return [
-            WeatherAlert(
-                id="DEMO-ALERT-2026-01",
-                headline="Thunderstorm and Moderate Lightning Alert",
-                description="Moderate thunderstorm accompanied by lightning and gusty winds (30-40 km/h) likely to occur.",
-                instruction="Farmers are advised to postpone pesticide spraying and secure harvested crops in shelters.",
-                severity=AlertSeverity.YELLOW,
-                alert_type=AlertType.THUNDERSTORM,
-                source="IMD / WeatherGPT Simulated Alert",
-                area_desc="Hyderabad & Rangareddy Districts",
-                effective_from=now,
-                expires_at=now + timedelta(hours=24),
-                latitude=latitude,
-                longitude=longitude,
-                radius_km=45.0,
-                color_code="#FFCC00"
-            )
-        ]
+        return []
