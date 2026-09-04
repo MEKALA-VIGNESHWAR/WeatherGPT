@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Sparkles, User, Languages } from './Icons';
+import { reverseGeocodeLocation } from '../services/api';
 
 interface NavbarProps {
   currentLocation: string;
@@ -81,14 +82,21 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
     setIsDetectingGPS(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
+      async (pos) => {
         setIsDetectingGPS(false);
-        onLocationChange('My Location', pos.coords.latitude, pos.coords.longitude);
         setShowLocationDropdown(false);
+        try {
+          const rev = await reverseGeocodeLocation(pos.coords.latitude, pos.coords.longitude);
+          const name = rev?.name && rev.name !== 'Current Location' && rev.name !== 'Your Location' ? rev.name : 'My Location';
+          onLocationChange(name, pos.coords.latitude, pos.coords.longitude);
+        } catch {
+          onLocationChange('My Location', pos.coords.latitude, pos.coords.longitude);
+        }
       },
       (err) => {
         setIsDetectingGPS(false);
-        alert('GPS permission denied or unavailable. Using default location (Hyderabad).');
+        console.warn('GPS detection failed:', err);
+        alert('GPS permission denied or unavailable.');
       },
       { timeout: 10000 }
     );

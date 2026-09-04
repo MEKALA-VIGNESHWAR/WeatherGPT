@@ -5,8 +5,9 @@ import { SectorAdvisoryResponse } from '../types/advisory';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
-export async function fetchForecast(lat: number, lon: number, days: number = 7, provider?: string): Promise<UnifiedWeatherResponse> {
-  const url = `${API_BASE}/weather/forecast?latitude=${lat}&longitude=${lon}&days=${days}${provider ? `&provider=${provider}` : ''}`;
+export async function fetchForecast(lat: number, lon: number, days: number = 7, provider?: string, locationName?: string): Promise<UnifiedWeatherResponse> {
+  const locParam = locationName ? `&location_name=${encodeURIComponent(locationName)}` : '';
+  const url = `${API_BASE}/weather/forecast?latitude=${lat}&longitude=${lon}&days=${days}${provider ? `&provider=${provider}` : ''}${locParam}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Weather fetch failed: ${res.statusText}`);
   return res.json();

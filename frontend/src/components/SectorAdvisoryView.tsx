@@ -76,29 +76,47 @@ export const SectorAdvisoryView: React.FC<SectorAdvisoryViewProps> = ({
           ))}
         </div>
 
-        {activeSector === 'agriculture' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Crop:</span>
-            <select
-              value={selectedCrop}
-              onChange={(e) => setSelectedCrop(e.target.value)}
-              style={{
-                background: '#1e293b',
-                color: '#f8fafc',
-                border: '1px solid rgba(255,255,255,0.1)',
-                padding: '0.4rem 0.8rem',
-                borderRadius: '8px',
-                fontSize: '0.82rem',
-                outline: 'none',
-                cursor: 'pointer'
-              }}
-            >
-              {crops.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            background: 'rgba(56, 189, 248, 0.1)',
+            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '8px',
+            padding: '0.35rem 0.75rem',
+            fontSize: '0.8rem',
+            color: '#38bdf8',
+            fontWeight: 600
+          }}>
+            <span>📍</span>
+            <span>{locationName}</span>
           </div>
-        )}
+
+          {activeSector === 'agriculture' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Crop:</span>
+              <select
+                value={selectedCrop}
+                onChange={(e) => setSelectedCrop(e.target.value)}
+                style={{
+                  background: '#1e293b',
+                  color: '#f8fafc',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '0.4rem 0.8rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {crops.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Advisory Content Cards */}

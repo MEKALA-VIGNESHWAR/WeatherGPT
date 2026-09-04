@@ -26,71 +26,82 @@ class MockProvider(BaseWeatherProvider):
         return forecast.current
 
     async def get_forecast(self, latitude: float, longitude: float, days: int = 7) -> UnifiedWeatherResponse:
-        now = datetime.now(timezone.utc)
+        utc_now = datetime.now(timezone.utc)
+        local_now = datetime.now().astimezone()
         
-        # Deterministic sample conditions: monsoon / light shower scenario
+        # Coordinate-based pseudo-deterministic variability
+        coord_hash = int(abs(latitude * 100) + abs(longitude * 100)) % 100
+        temp_base = 23.0 + (coord_hash % 14)  # 23.0 to 36.0 C
+        feels_diff = 2.0 if temp_base > 28 else -1.0
+        humid_base = 45 + (coord_hash % 45)   # 45% to 89%
+        prob_base = 15 + ((coord_hash * 7) % 70) # 15% to 84%
+        is_rainy = prob_base >= 55
+        
         current = CurrentWeather(
-            temperature_c=28.4,
-            feels_like_c=31.2,
-            relative_humidity_pct=78,
-            wind_speed_kmh=14.5,
-            wind_direction_deg=220,
-            wind_gusts_kmh=22.0,
-            precipitation_mm=2.5,
-            precipitation_probability_pct=65,
-            surface_pressure_hpa=1008.4,
-            visibility_km=8.0,
-            uv_index=4.2,
-            weather_code=61,
-            weather_condition="Light rain",
-            weather_icon="🌦️",
-            sunrise="05:58",
-            sunset="18:32"
+            temperature_c=round(temp_base, 1),
+            feels_like_c=round(temp_base + feels_diff, 1),
+            relative_humidity_pct=humid_base,
+            wind_speed_kmh=round(10.0 + (coord_hash % 16), 1),
+            wind_direction_deg=(coord_hash * 25) % 360,
+            wind_gusts_kmh=round(16.0 + (coord_hash % 15), 1),
+            precipitation_mm=round(3.5 + (prob_base / 20.0), 1) if is_rainy else 0.0,
+            precipitation_probability_pct=prob_base,
+            surface_pressure_hpa=round(1008.0 + (coord_hash % 12) - 6, 1),
+            visibility_km=7.0 if is_rainy else 10.0,
+            uv_index=round(min(11.0, max(1.0, 3.5 + (coord_hash % 6))), 1),
+            weather_code=61 if is_rainy else (2 if prob_base > 30 else 0),
+            weather_condition="Light rain" if is_rainy else ("Partly cloudy" if prob_base > 30 else "Clear sky"),
+            weather_icon="🌦️" if is_rainy else ("⛅" if prob_base > 30 else "☀️"),
+            sunrise="06:00",
+            sunset="18:30"
         )
 
         hourly: List[HourlyForecastPoint] = []
-        for h in range(24):
-            t_dt = now + timedelta(hours=h)
-            prob = 75 if 8 <= t_dt.hour <= 16 else 30
+        for h in range(72):
+            t_dt = local_now + timedelta(hours=h)
+            h_cycle = 4.0 * (1.0 - abs(t_dt.hour - 14) / 10.0)
+            h_prob = min(95, max(10, prob_base + int(15 * ((h % 5) - 2))))
+            h_rain = h_prob >= 55
             hourly.append(
                 HourlyForecastPoint(
                     time=t_dt.strftime("%Y-%m-%dT%H:00"),
-                    temperature_c=round(26.0 + 4.0 * (1.0 - abs(t_dt.hour - 14) / 10), 1),
-                    relative_humidity_pct=min(95, max(50, 85 - (t_dt.hour % 8) * 3)),
-                    precipitation_probability_pct=prob,
-                    precipitation_mm=3.2 if prob > 50 else 0.0,
-                    wind_speed_kmh=12.0 + (h % 5),
-                    weather_code=61 if prob > 50 else 2,
-                    weather_condition="Light rain" if prob > 50 else "Partly cloudy",
-                    weather_icon="🌦️" if prob > 50 else "⛅"
+                    temperature_c=round(temp_base + h_cycle + ((h % 3) - 1) * 0.4, 1),
+                    relative_humidity_pct=min(98, max(30, humid_base - int(h_cycle * 2))),
+                    precipitation_probability_pct=h_prob,
+                    precipitation_mm=round(2.0 + (h_prob / 25.0), 1) if h_rain else 0.0,
+                    wind_speed_kmh=round(10.0 + ((h + coord_hash) % 12), 1),
+                    weather_code=61 if h_rain else (2 if h_prob > 30 else 0),
+                    weather_condition="Light rain" if h_rain else ("Partly cloudy" if h_prob > 30 else "Clear sky"),
+                    weather_icon="🌦️" if h_rain else ("⛅" if h_prob > 30 else "☀️")
                 )
             )
 
         daily: List[DailyForecastPoint] = []
         for d in range(days):
-            d_dt = now + timedelta(days=d)
-            prob = 80 if d == 1 else (40 if d % 2 == 0 else 60)
+            d_dt = local_now + timedelta(days=d)
+            d_prob = min(95, max(15, prob_base + ((d * 13) % 40) - 20))
+            d_rain = d_prob >= 60
             daily.append(
                 DailyForecastPoint(
                     date=d_dt.strftime("%Y-%m-%d"),
-                    temperature_max_c=32.5,
-                    temperature_min_c=23.0,
-                    precipitation_probability_max_pct=prob,
-                    precipitation_sum_mm=18.4 if prob > 70 else 2.0,
-                    wind_speed_max_kmh=18.0,
-                    weather_code=63 if prob > 70 else 1,
-                    weather_condition="Moderate rain" if prob > 70 else "Mainly clear",
-                    weather_icon="🌧️" if prob > 70 else "🌤️",
-                    sunrise="05:58",
-                    sunset="18:32",
-                    uv_index_max=6.5
+                    temperature_max_c=round(temp_base + 3.5, 1),
+                    temperature_min_c=round(temp_base - 5.0, 1),
+                    precipitation_probability_max_pct=d_prob,
+                    precipitation_sum_mm=round(12.0 + (d_prob / 5.0), 1) if d_rain else 1.0,
+                    wind_speed_max_kmh=round(15.0 + (coord_hash % 10), 1),
+                    weather_code=63 if d_rain else (1 if d_prob < 35 else 2),
+                    weather_condition="Moderate rain" if d_rain else ("Mainly clear" if d_prob < 35 else "Partly cloudy"),
+                    weather_icon="🌧️" if d_rain else ("🌤️" if d_prob < 35 else "⛅"),
+                    sunrise="06:00",
+                    sunset="18:30",
+                    uv_index_max=round(min(11.0, max(2.0, 5.0 + (coord_hash % 5))), 1)
                 )
             )
 
         trust = TrustMetadata(
             source=self.provider_name,
-            observed_at=now,
-            retrieved_at=now,
+            observed_at=utc_now,
+            retrieved_at=utc_now,
             data_age_minutes=0.1,
             source_authority="synthetic_demo_model",
             confidence=ConfidenceLevel.HIGH,
@@ -100,12 +111,12 @@ class MockProvider(BaseWeatherProvider):
 
         return UnifiedWeatherResponse(
             location=LocationInfo(
-                name="Demo Station (Hyderabad)",
+                name="Target Location",
                 latitude=latitude,
                 longitude=longitude,
-                state="Telangana",
+                state="State",
                 country="India",
-                elevation_m=542.0
+                elevation_m=500.0
             ),
             current=current,
             hourly=hourly,

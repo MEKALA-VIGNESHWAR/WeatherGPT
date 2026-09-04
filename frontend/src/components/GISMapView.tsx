@@ -563,35 +563,45 @@ export const GISMapView: React.FC<GISMapViewProps> = ({
                 </div>
 
                 {/* Next 4 Hours Forecast Preview */}
-                {selectedPoint.weather.hourly && selectedPoint.weather.hourly.length > 0 && (
-                  <div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' }}>
-                      Next Hours Outlook
+                {selectedPoint.weather.hourly && selectedPoint.weather.hourly.length > 0 && (() => {
+                  const now = new Date();
+                  const curH = now.getHours();
+                  let sIdx = selectedPoint.weather.hourly.findIndex(p => {
+                    const d = new Date(p.time);
+                    return !isNaN(d.getTime()) && d >= new Date(now.getFullYear(), now.getMonth(), now.getDate(), curH);
+                  });
+                  if (sIdx === -1) sIdx = 0;
+                  const outlookSlice = selectedPoint.weather.hourly.slice(sIdx, sIdx + 4);
+                  return (
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, marginBottom: '4px' }}>
+                        Next Hours Outlook
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                        {outlookSlice.map((pt, i) => {
+                          const hTime = pt.time.includes('T') ? pt.time.split('T')[1].slice(0, 5) : pt.time;
+                          return (
+                            <div
+                              key={i}
+                              style={{
+                                flex: '1',
+                                background: 'rgba(30, 41, 59, 0.5)',
+                                borderRadius: '6px',
+                                padding: '0.35rem 0.25rem',
+                                textAlign: 'center',
+                                fontSize: '0.72rem'
+                              }}
+                            >
+                              <div style={{ color: '#94a3b8', fontSize: '0.65rem' }}>{i === 0 ? 'Now' : hTime}</div>
+                              <div style={{ fontSize: '1rem', margin: '2px 0' }}>{pt.weather_icon}</div>
+                              <div style={{ fontWeight: 700 }}>{Math.round(pt.temperature_c)}°</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
-                      {selectedPoint.weather.hourly.slice(0, 4).map((pt, i) => {
-                        const hTime = pt.time.includes('T') ? pt.time.split('T')[1].slice(0, 5) : pt.time;
-                        return (
-                          <div
-                            key={i}
-                            style={{
-                              flex: '1',
-                              background: 'rgba(30, 41, 59, 0.5)',
-                              borderRadius: '6px',
-                              padding: '0.35rem 0.25rem',
-                              textAlign: 'center',
-                              fontSize: '0.72rem'
-                            }}
-                          >
-                            <div style={{ color: '#94a3b8', fontSize: '0.65rem' }}>{i === 0 ? 'Now' : hTime}</div>
-                            <div style={{ fontSize: '1rem', margin: '2px 0' }}>{pt.weather_icon}</div>
-                            <div style={{ fontWeight: 700 }}>{Math.round(pt.temperature_c)}°</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Primary CTA: Set as Target Location */}
                 <button

@@ -14,7 +14,7 @@ async def test_mock_provider_returns_demo_data():
     assert isinstance(res, UnifiedWeatherResponse)
     assert res.trust.is_demo_data is True
     assert len(res.daily) == 7
-    assert len(res.hourly) == 24
+    assert len(res.hourly) >= 24
     assert res.current.temperature_c > 0
 
 

@@ -26,16 +26,23 @@ async def get_weather_forecast(
     latitude: float = Query(..., ge=-90, le=90),
     longitude: float = Query(..., ge=-180, le=180),
     days: int = Query(7, ge=1, le=16),
-    provider: Optional[str] = Query(None)
+    provider: Optional[str] = Query(None),
+    location_name: Optional[str] = Query(None)
 ):
     try:
         fused = await fusion_service.get_fused_weather(latitude, longitude, provider_name=provider, days=days)
-        # Attempt to resolve city name if default
-        if fused.location.name == "Target Location":
+        
+        # If client explicitly specified a location name, respect it
+        if location_name and location_name.strip():
+            fused.location.name = location_name.strip()
+        elif fused.location.name in ["Target Location", "Demo Station (Hyderabad)", "Unknown Location"] or "Demo Station" in (fused.location.name or ""):
             geo_res = await geo_service.reverse_geocode(latitude, longitude)
-            fused.location.name = geo_res.name
-            fused.location.state = geo_res.state
-            fused.location.country = geo_res.country
+            if geo_res and geo_res.name:
+                fused.location.name = geo_res.name
+                if geo_res.state:
+                    fused.location.state = geo_res.state
+                if geo_res.country:
+                    fused.location.country = geo_res.country
         return fused
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -9,7 +9,7 @@ import { GISMapView } from './components/GISMapView';
 import { SectorAdvisoryView } from './components/SectorAdvisoryView';
 import { ClimateTrendsView } from './components/ClimateTrendsView';
 import { AdminView } from './components/AdminView';
-import { fetchForecast, fetchActiveAlerts } from './services/api';
+import { fetchForecast, fetchActiveAlerts, reverseGeocodeLocation } from './services/api';
 import type { UnifiedWeatherResponse } from './types/weather';
 import type { WeatherAlert } from './types/alert';
 import { Sparkles, Layers, Tractor, Activity, CloudRain } from './components/Icons';
@@ -55,10 +55,46 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  // Fetch forecast and alerts whenever location changes
+  // Attempt browser geolocation on startup, gracefully falling back to Hyderabad
   useEffect(() => {
-    loadWeatherData();
-  }, [latitude, longitude]);
+    let isMounted = true;
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          if (!isMounted) return;
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          let detectedName = 'My Location';
+          try {
+            const rev = await reverseGeocodeLocation(lat, lon);
+            if (rev?.name && rev.name !== 'Current Location' && rev.name !== 'Your Location') {
+              detectedName = rev.name;
+            }
+          } catch {
+            // retain 'My Location'
+          }
+          if (isMounted) {
+            setCurrentLocation(detectedName);
+            setLatitude(lat);
+            setLongitude(lon);
+            loadWeatherData(lat, lon, detectedName);
+          }
+        },
+        () => {
+          // Graceful fallback to default Hyderabad
+          if (isMounted) {
+            loadWeatherData(17.3850, 78.4867, 'Hyderabad');
+          }
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      loadWeatherData(17.3850, 78.4867, 'Hyderabad');
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // WebSocket for real-time alert notifications
   useEffect(() => {
@@ -102,9 +138,12 @@ export const App: React.FC = () => {
     setError(null);
     try {
       const [forecastRes, alertsRes] = await Promise.all([
-        fetchForecast(lat, lon, 7),
+        fetchForecast(lat, lon, 7, undefined, loc),
         fetchActiveAlerts(lat, lon, loc)
       ]);
+      if (forecastRes.location?.name && (loc === 'My Location' || loc === 'Detected Location' || !loc)) {
+        setCurrentLocation(forecastRes.location.name);
+      }
       setWeatherData(forecastRes);
       if (alertsRes && Array.isArray(alertsRes.alerts)) {
         setActiveAlerts(alertsRes.alerts);
@@ -263,7 +302,7 @@ export const App: React.FC = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <WeatherCard
                       weather={weatherData.current}
-                      locationName={weatherData.location.name || currentLocation}
+                      locationName={currentLocation || weatherData.location.name}
                       trust={weatherData.trust}
                     />
                     <HourlySlider hourly={weatherData.hourly} />

@@ -127,13 +127,13 @@ class OpenMeteoProvider(BaseWeatherProvider):
                         start_idx = idx
                         break
 
-        times = all_times[start_idx : start_idx + 24]
-        temps = hourly.get("temperature_2m", [])[start_idx : start_idx + 24]
-        humids = hourly.get("relative_humidity_2m", [])[start_idx : start_idx + 24]
-        probs = hourly.get("precipitation_probability", [])[start_idx : start_idx + 24]
-        precips = hourly.get("precipitation", [])[start_idx : start_idx + 24]
-        winds = hourly.get("wind_speed_10m", [])[start_idx : start_idx + 24]
-        codes = hourly.get("weather_code", [])[start_idx : start_idx + 24]
+        times = all_times[start_idx:]
+        temps = hourly.get("temperature_2m", [])[start_idx:]
+        humids = hourly.get("relative_humidity_2m", [])[start_idx:]
+        probs = hourly.get("precipitation_probability", [])[start_idx:]
+        precips = hourly.get("precipitation", [])[start_idx:]
+        winds = hourly.get("wind_speed_10m", [])[start_idx:]
+        codes = hourly.get("weather_code", [])[start_idx:]
 
         for i in range(len(times)):
             c_text, c_icon = parse_wmo(codes[i] if i < len(codes) else 0)
