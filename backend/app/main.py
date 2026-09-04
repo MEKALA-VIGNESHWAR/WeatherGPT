@@ -118,18 +118,25 @@ ws_manager = ConnectionManager()
 async def websocket_alerts(websocket: WebSocket):
     await ws_manager.connect(websocket)
     try:
-        # Immediately send active warnings on connect
-        active = warning_service.get_alerts_for_location(17.3850, 78.4867)
-        await websocket.send_text(json.dumps({
-            "type": "INITIAL_ALERTS",
-            "data": active.model_dump()
-        }, default=str))
-
         while True:
-            # Keep-alive heartbeat ping/pong
-            data = await websocket.receive_text()
-            if data == "ping":
+            data_text = await websocket.receive_text()
+            if data_text == "ping":
                 await websocket.send_text("pong")
+                continue
+            
+            try:
+                msg = json.loads(data_text)
+                if msg.get("type") == "SUBSCRIBE_LOCATION":
+                    lat = float(msg.get("latitude", 17.3850))
+                    lon = float(msg.get("longitude", 78.4867))
+                    loc_name = msg.get("location_name", "Target Location")
+                    active = warning_service.get_alerts_for_location(lat, lon, location_name=loc_name)
+                    await websocket.send_text(json.dumps({
+                        "type": "LOCATION_ALERTS",
+                        "data": active.model_dump()
+                    }, default=str))
+            except Exception:
+                pass
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
     except Exception as e:

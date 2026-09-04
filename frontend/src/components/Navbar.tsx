@@ -26,12 +26,21 @@ const LANGUAGES = [
 
 const PRESET_CITIES = [
   { name: 'Hyderabad', lat: 17.3850, lon: 78.4867, state: 'Telangana' },
+  { name: 'Rangareddy', lat: 17.2403, lon: 78.4294, state: 'Telangana' },
+  { name: 'Medchal', lat: 17.6297, lon: 78.4814, state: 'Telangana' },
   { name: 'Amaravati', lat: 16.5417, lon: 80.5158, state: 'Andhra Pradesh' },
+  { name: 'Visakhapatnam', lat: 17.6868, lon: 83.2185, state: 'Andhra Pradesh' },
   { name: 'Bengaluru', lat: 12.9716, lon: 77.5946, state: 'Karnataka' },
   { name: 'Chennai', lat: 13.0827, lon: 80.2707, state: 'Tamil Nadu' },
   { name: 'Mumbai', lat: 19.0760, lon: 72.8777, state: 'Maharashtra' },
-  { name: 'Delhi', lat: 28.6139, lon: 77.2090, state: 'Delhi' },
-  { name: 'Kolkata', lat: 22.5726, lon: 88.3639, state: 'West Bengal' }
+  { name: 'Pune', lat: 18.5204, lon: 73.8567, state: 'Maharashtra' },
+  { name: 'Delhi NCR', lat: 28.6139, lon: 77.2090, state: 'Delhi' },
+  { name: 'Kolkata', lat: 22.5726, lon: 88.3639, state: 'West Bengal' },
+  { name: 'Jaipur', lat: 26.9124, lon: 75.7873, state: 'Rajasthan' },
+  { name: 'Ahmedabad', lat: 23.0225, lon: 72.5714, state: 'Gujarat' },
+  { name: 'Lucknow', lat: 26.8467, lon: 80.9462, state: 'Uttar Pradesh' },
+  { name: 'Bhopal', lat: 23.2599, lon: 77.4126, state: 'Madhya Pradesh' },
+  { name: 'Kochi', lat: 9.9312, lon: 76.2673, state: 'Kerala' }
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -46,20 +55,49 @@ export const Navbar: React.FC<NavbarProps> = ({
   isDemoMode = false
 }) => {
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDetectingGPS, setIsDetectingGPS] = useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowLocationDropdown(false);
+      }
+    };
+    if (showLocationDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLocationDropdown]);
 
   const handleDetectGPS = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          onLocationChange('My Location', pos.coords.latitude, pos.coords.longitude);
-          setShowLocationDropdown(false);
-        },
-        () => {
-          alert('GPS permission denied. Using default location (Hyderabad).');
-        }
-      );
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
     }
+    setIsDetectingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsDetectingGPS(false);
+        onLocationChange('My Location', pos.coords.latitude, pos.coords.longitude);
+        setShowLocationDropdown(false);
+      },
+      (err) => {
+        setIsDetectingGPS(false);
+        alert('GPS permission denied or unavailable. Using default location (Hyderabad).');
+      },
+      { timeout: 10000 }
+    );
   };
+
+  const filteredCities = PRESET_CITIES.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.state.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <header style={{
@@ -170,64 +208,108 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             {showLocationDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: '110%',
-                right: 0,
-                background: '#1e293b',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                borderRadius: '10px',
-                padding: '0.5rem',
-                minWidth: '220px',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                zIndex: 200
-              }}>
+              <div
+                ref={dropdownRef}
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  left: 0,
+                  background: '#0f172a',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  borderRadius: '12px',
+                  padding: '0.75rem',
+                  minWidth: '290px',
+                  maxWidth: 'calc(100vw - 2rem)',
+                  boxShadow: '0 16px 40px rgba(0,0,0,0.7)',
+                  zIndex: 1000
+                }}
+              >
+                {/* GPS Detect Button */}
                 <button
                   onClick={handleDetectGPS}
+                  disabled={isDetectingGPS}
                   style={{
                     width: '100%',
-                    padding: '0.5rem',
+                    padding: '0.55rem 0.75rem',
                     textAlign: 'left',
-                    background: 'rgba(2, 132, 199, 0.2)',
+                    background: isDetectingGPS ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.2)',
                     border: '1px solid rgba(2, 132, 199, 0.4)',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     color: '#38bdf8',
-                    fontSize: '0.8rem',
+                    fontSize: '0.82rem',
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    marginBottom: '0.5rem',
+                    cursor: isDetectingGPS ? 'wait' : 'pointer',
+                    marginBottom: '0.65rem',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px'
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  📍 Detect My GPS Location
+                  <span>{isDetectingGPS ? '📡' : '📍'}</span>
+                  <span>{isDetectingGPS ? 'Detecting GPS Coordinates...' : 'Detect My GPS Location'}</span>
                 </button>
-                <div style={{ fontSize: '0.7rem', color: '#94a3b8', padding: '0.2rem 0.4rem', fontWeight: 600 }}>
-                  INDIAN METEOROLOGICAL CENTERS
-                </div>
-                {PRESET_CITIES.map((c) => (
-                  <div
-                    key={c.name}
-                    onClick={() => {
-                      onLocationChange(c.name, c.lat, c.lon);
-                      setShowLocationDropdown(false);
-                    }}
+
+                {/* City Search Bar */}
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Search city or state..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    autoFocus
                     style={{
-                      padding: '0.4rem 0.6rem',
+                      width: '100%',
+                      background: 'rgba(30, 41, 59, 0.7)',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
                       borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontSize: '0.8rem',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      color: currentLocation === c.name ? '#38bdf8' : '#e2e8f0',
-                      background: currentLocation === c.name ? 'rgba(56, 189, 248, 0.1)' : 'transparent'
+                      padding: '0.4rem 0.6rem',
+                      color: '#f8fafc',
+                      fontSize: '0.78rem',
+                      outline: 'none',
+                      boxSizing: 'border-box'
                     }}
-                  >
-                    <span>{c.name}</span>
-                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{c.state}</span>
-                  </div>
-                ))}
+                  />
+                </div>
+
+                <div style={{ fontSize: '0.68rem', color: '#94a3b8', padding: '0.2rem 0.4rem', fontWeight: 700, letterSpacing: '0.05em' }}>
+                  INDIAN METEOROLOGICAL CENTERS ({filteredCities.length})
+                </div>
+
+                {/* Cities List */}
+                <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px' }}>
+                  {filteredCities.length > 0 ? (
+                    filteredCities.map((c) => (
+                      <div
+                        key={c.name}
+                        onClick={() => {
+                          onLocationChange(c.name, c.lat, c.lon);
+                          setShowLocationDropdown(false);
+                          setSearchQuery('');
+                        }}
+                        style={{
+                          padding: '0.45rem 0.65rem',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          color: currentLocation.toLowerCase().includes(c.name.toLowerCase()) ? '#38bdf8' : '#e2e8f0',
+                          background: currentLocation.toLowerCase().includes(c.name.toLowerCase()) ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
+                          fontWeight: currentLocation.toLowerCase().includes(c.name.toLowerCase()) ? 700 : 400
+                        }}
+                      >
+                        <span>{c.name}</span>
+                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{c.state}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: '0.75rem', textAlign: 'center', color: '#64748b', fontSize: '0.75rem' }}>
+                      No cities matching "{searchQuery}"
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

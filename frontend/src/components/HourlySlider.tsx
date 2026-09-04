@@ -41,8 +41,8 @@ export const HourlySlider: React.FC<HourlySliderProps> = ({ hourly }) => {
                 border: '1px solid rgba(255, 255, 255, 0.05)'
               }}
             >
-              <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
-                {i === 0 ? 'Now' : hourLabel}
+              <span style={{ fontSize: '0.72rem', color: i === 0 ? '#38bdf8' : '#94a3b8', fontWeight: i === 0 ? 700 : 500 }}>
+                {i === 0 ? `Now (${hourLabel})` : hourLabel}
               </span>
               <span style={{ fontSize: '1.5rem', margin: '2px 0' }}>
                 {pt.weather_icon}

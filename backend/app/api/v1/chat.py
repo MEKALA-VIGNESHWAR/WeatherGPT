@@ -39,7 +39,7 @@ async def chat_query(req: ChatRequest, db: Session = Depends(get_db)):
             conversation_id=resp.conversation_id,
             sender="assistant",
             content=resp.answer,
-            structured_data=resp.model_dump()
+            structured_data=resp.model_dump(mode="json")
         ))
         db.commit()
 

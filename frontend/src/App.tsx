@@ -65,10 +65,20 @@ export const App: React.FC = () => {
     let ws: WebSocket | null = null;
     try {
       ws = new WebSocket('ws://localhost:8000/ws/alerts');
+      ws.onopen = () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'SUBSCRIBE_LOCATION',
+            latitude,
+            longitude,
+            location_name: currentLocation
+          }));
+        }
+      };
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload.type === 'INITIAL_ALERTS' && payload.data?.alerts) {
+          if ((payload.type === 'INITIAL_ALERTS' || payload.type === 'LOCATION_ALERTS') && payload.data?.alerts) {
             setActiveAlerts(payload.data.alerts);
           }
         } catch {
@@ -82,18 +92,21 @@ export const App: React.FC = () => {
     return () => {
       if (ws) ws.close();
     };
-  }, []);
+  }, [latitude, longitude, currentLocation]);
 
-  const loadWeatherData = async () => {
+  const loadWeatherData = async (overrideLat?: number, overrideLon?: number, overrideName?: string) => {
+    const lat = overrideLat ?? latitude;
+    const lon = overrideLon ?? longitude;
+    const loc = overrideName ?? currentLocation;
     setLoading(true);
     setError(null);
     try {
       const [forecastRes, alertsRes] = await Promise.all([
-        fetchForecast(latitude, longitude, 7),
-        fetchActiveAlerts(latitude, longitude, currentLocation)
+        fetchForecast(lat, lon, 7),
+        fetchActiveAlerts(lat, lon, loc)
       ]);
       setWeatherData(forecastRes);
-      if (alertsRes?.alerts) {
+      if (alertsRes && Array.isArray(alertsRes.alerts)) {
         setActiveAlerts(alertsRes.alerts);
       }
     } catch (err: any) {
@@ -107,6 +120,7 @@ export const App: React.FC = () => {
     setCurrentLocation(name);
     setLatitude(lat);
     setLongitude(lon);
+    loadWeatherData(lat, lon, name);
   };
 
   return (
@@ -138,7 +152,7 @@ export const App: React.FC = () => {
               <strong>Service Notice:</strong> {error}
             </div>
             <button
-              onClick={loadWeatherData}
+              onClick={() => loadWeatherData()}
               style={{ padding: '0.4rem 0.8rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
             >
               Retry Connection
@@ -275,6 +289,7 @@ export const App: React.FC = () => {
                   latitude={latitude}
                   longitude={longitude}
                   locationName={currentLocation}
+                  onLocationSelect={handleLocationSelect}
                 />
               </>
             ) : null}
@@ -337,6 +352,7 @@ export const App: React.FC = () => {
               latitude={latitude}
               longitude={longitude}
               locationName={currentLocation}
+              onLocationSelect={handleLocationSelect}
             />
           </div>
         )}

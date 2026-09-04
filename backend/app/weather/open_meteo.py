@@ -106,15 +106,29 @@ class OpenMeteoProvider(BaseWeatherProvider):
             sunset=sunset
         )
 
-        # Build 24 hours of forecast
+        # Build 24 hours of forecast starting from current hour
         hourly_points: List[HourlyForecastPoint] = []
-        times = hourly.get("time", [])[:24]
-        temps = hourly.get("temperature_2m", [])[:24]
-        humids = hourly.get("relative_humidity_2m", [])[:24]
-        probs = hourly.get("precipitation_probability", [])[:24]
-        precips = hourly.get("precipitation", [])[:24]
-        winds = hourly.get("wind_speed_10m", [])[:24]
-        codes = hourly.get("weather_code", [])[:24]
+        all_times = hourly.get("time", [])
+        curr_time_str = curr.get("time", "")  # e.g., "2026-09-04T18:00"
+        
+        start_idx = 0
+        if curr_time_str and curr_time_str in all_times:
+            start_idx = all_times.index(curr_time_str)
+        elif all_times:
+            # Fallback: match by date and current hour
+            now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H")
+            for idx, t in enumerate(all_times):
+                if t.startswith(now_iso) or t >= now_iso:
+                    start_idx = idx
+                    break
+
+        times = all_times[start_idx : start_idx + 24]
+        temps = hourly.get("temperature_2m", [])[start_idx : start_idx + 24]
+        humids = hourly.get("relative_humidity_2m", [])[start_idx : start_idx + 24]
+        probs = hourly.get("precipitation_probability", [])[start_idx : start_idx + 24]
+        precips = hourly.get("precipitation", [])[start_idx : start_idx + 24]
+        winds = hourly.get("wind_speed_10m", [])[start_idx : start_idx + 24]
+        codes = hourly.get("weather_code", [])[start_idx : start_idx + 24]
 
         for i in range(len(times)):
             c_text, c_icon = parse_wmo(codes[i] if i < len(codes) else 0)
