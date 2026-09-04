@@ -10,8 +10,9 @@ import { SectorAdvisoryView } from './components/SectorAdvisoryView';
 import { ClimateTrendsView } from './components/ClimateTrendsView';
 import { AdminView } from './components/AdminView';
 import { fetchForecast, fetchActiveAlerts } from './services/api';
-import { UnifiedWeatherResponse } from './types/weather';
-import { WeatherAlert } from './types/alert';
+import type { UnifiedWeatherResponse } from './types/weather';
+import type { WeatherAlert } from './types/alert';
+import { Sparkles, Layers, Tractor, Activity, CloudRain } from './components/Icons';
 
 export const App: React.FC = () => {
   const [currentLocation, setCurrentLocation] = useState('Hyderabad');
@@ -19,12 +20,40 @@ export const App: React.FC = () => {
   const [longitude, setLongitude] = useState(78.4867);
   const [selectedLanguage, setSelectedLanguage] = useState('en');
   const [userRole, setUserRole] = useState('citizen');
-  const [activeTab, setActiveTab] = useState('dashboard');
   
+  // URL Hash Sync for robust routing (#dashboard, #chat, #map, #advisories, #climate, #admin)
+  const getInitialTab = () => {
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    if (['dashboard', 'chat', 'map', 'advisories', 'climate', 'admin'].includes(hash)) {
+      return hash;
+    }
+    return 'dashboard';
+  };
+
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [weatherData, setWeatherData] = useState<UnifiedWeatherResponse | null>(null);
   const [activeAlerts, setActiveAlerts] = useState<WeatherAlert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync hash with activeTab
+  const handleTabSwitch = (tabId: string) => {
+    setActiveTab(tabId);
+    window.location.hash = `#${tabId}`;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Listen for browser back/forward button hash changes
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '').toLowerCase();
+      if (['dashboard', 'chat', 'map', 'advisories', 'climate', 'admin'].includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   // Fetch forecast and alerts whenever location changes
   useEffect(() => {
@@ -92,7 +121,7 @@ export const App: React.FC = () => {
         userRole={userRole}
         onUserRoleChange={setUserRole}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabSwitch}
         isDemoMode={weatherData?.trust.is_demo_data}
       />
 
@@ -102,34 +131,120 @@ export const App: React.FC = () => {
         {/* Official Warnings Banner (Global) */}
         <AlertBanner alerts={activeAlerts} />
 
-        {/* Loading / Error States */}
-        {loading && !weatherData && (
-          <div className="glass-panel" style={{ padding: '4rem', textAlign: 'center', color: '#38bdf8' }}>
-            <span className="animate-pulse-glow" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '1rem' }}>☁️</span>
-            <h3>Retrieving meteorological observations and NWP model runs...</h3>
-          </div>
-        )}
-
-        {error && !weatherData && (
-          <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', borderColor: '#ef4444', color: '#fca5a5' }}>
-            <h4>Unable to reach weather backend.</h4>
-            <p style={{ margin: '0.5rem 0', fontSize: '0.9rem' }}>{error}</p>
+        {/* Global Error Banner if backend unreachable */}
+        {error && (
+          <div className="glass-panel" style={{ padding: '1.25rem', marginBottom: '1.5rem', borderColor: '#ef4444', color: '#fca5a5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>Service Notice:</strong> {error}
+            </div>
             <button
               onClick={loadWeatherData}
-              style={{ padding: '0.5rem 1rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}
+              style={{ padding: '0.4rem 0.8rem', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem' }}
             >
               Retry Connection
             </button>
           </div>
         )}
 
-        {/* View Routing */}
-        {weatherData && (
-          <>
-            {activeTab === 'dashboard' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                
-                {/* Top Row: Current Weather Hero & Chat Drawer */}
+        {/* TAB 1: DASHBOARD */}
+        {activeTab === 'dashboard' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            
+            {/* Quick Section Traverse Bar */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '0.75rem'
+            }}>
+              <div
+                onClick={() => handleTabSwitch('chat')}
+                className="glass-panel"
+                style={{
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(2, 132, 199, 0.12)',
+                  borderColor: 'rgba(56, 189, 248, 0.25)'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>💬</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc' }}>Ask WeatherGPT</div>
+                  <div style={{ fontSize: '0.7rem', color: '#38bdf8' }}>Open Full Chat →</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleTabSwitch('map')}
+                className="glass-panel"
+                style={{
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: 'rgba(16, 185, 129, 0.25)'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>🗺️</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc' }}>GIS Weather Map</div>
+                  <div style={{ fontSize: '0.7rem', color: '#10b981' }}>Radar & Hazards →</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleTabSwitch('advisories')}
+                className="glass-panel"
+                style={{
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  borderColor: 'rgba(245, 158, 11, 0.25)'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>🌾</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc' }}>Crop Advisories</div>
+                  <div style={{ fontSize: '0.7rem', color: '#f59e0b' }}>Irrigation & Spraying →</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => handleTabSwitch('climate')}
+                className="glass-panel"
+                style={{
+                  padding: '0.75rem 1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  background: 'rgba(99, 102, 241, 0.1)',
+                  borderColor: 'rgba(99, 102, 241, 0.25)'
+                }}
+              >
+                <span style={{ fontSize: '1.4rem' }}>📊</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#f8fafc' }}>Climate Trends</div>
+                  <div style={{ fontSize: '0.7rem', color: '#818cf8' }}>7-Day Rainfall Stats →</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Weather Hero Card & Embedded Assistant */}
+            {loading && !weatherData ? (
+              <div className="glass-panel" style={{ padding: '3.5rem', textAlign: 'center', color: '#38bdf8' }}>
+                <span className="animate-pulse-glow" style={{ fontSize: '2.5rem', display: 'block', marginBottom: '0.75rem' }}>☁️</span>
+                <h3>Loading verified meteorological grid observations...</h3>
+              </div>
+            ) : weatherData ? (
+              <>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '1.5rem', alignItems: 'stretch' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <WeatherCard
@@ -140,7 +255,7 @@ export const App: React.FC = () => {
                     <HourlySlider hourly={weatherData.hourly} />
                   </div>
 
-                  {/* Conversational Assistant Drawer */}
+                  {/* Embedded Conversational Assistant Card */}
                   <div>
                     <ChatDrawer
                       currentLocation={currentLocation}
@@ -155,55 +270,155 @@ export const App: React.FC = () => {
                 {/* 7-Day Forecast Grid */}
                 <ForecastGrid daily={weatherData.daily} />
 
-                {/* GIS Map Preview */}
+                {/* GIS Map Preview on Dashboard */}
                 <GISMapView
                   latitude={latitude}
                   longitude={longitude}
                   locationName={currentLocation}
                 />
+              </>
+            ) : null}
 
+          </div>
+        )}
+
+        {/* TAB 2: FULL CHAT ASSISTANT */}
+        {activeTab === 'chat' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Conversational Weather Intelligence
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  Ask questions in {selectedLanguage.toUpperCase()} or use voice input for instant decision support.
+                </p>
               </div>
-            )}
+              <button
+                onClick={() => handleTabSwitch('dashboard')}
+                style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', padding: '0.4rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
 
-            {activeTab === 'chat' && (
-              <ChatDrawer
-                currentLocation={currentLocation}
-                latitude={latitude}
-                longitude={longitude}
-                selectedLanguage={selectedLanguage}
-                userRole={userRole}
-                isOpenAsFullPage={true}
-              />
-            )}
+            <ChatDrawer
+              currentLocation={currentLocation}
+              latitude={latitude}
+              longitude={longitude}
+              selectedLanguage={selectedLanguage}
+              userRole={userRole}
+              isOpenAsFullPage={true}
+            />
+          </div>
+        )}
 
-            {activeTab === 'map' && (
-              <GISMapView
-                latitude={latitude}
-                longitude={longitude}
-                locationName={currentLocation}
-              />
-            )}
+        {/* TAB 3: GIS MAP */}
+        {activeTab === 'map' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>
+                  GIS Geospatial Weather Map & Hazard Radar
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  Interactive OpenStreetMap canvas with IMD weather stations and active hazard zones.
+                </p>
+              </div>
+              <button
+                onClick={() => handleTabSwitch('dashboard')}
+                style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', padding: '0.4rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
 
-            {activeTab === 'advisories' && (
-              <SectorAdvisoryView
-                latitude={latitude}
-                longitude={longitude}
-                locationName={currentLocation}
-              />
-            )}
+            <GISMapView
+              latitude={latitude}
+              longitude={longitude}
+              locationName={currentLocation}
+            />
+          </div>
+        )}
 
-            {activeTab === 'climate' && (
-              <ClimateTrendsView
-                latitude={latitude}
-                longitude={longitude}
-                locationName={currentLocation}
-              />
-            )}
+        {/* TAB 4: ADVISORIES */}
+        {activeTab === 'advisories' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Sector Decision Support Advisories
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  Actionable guidance for Agriculture, Disaster Management, Commuters, Marine, and Aviation.
+                </p>
+              </div>
+              <button
+                onClick={() => handleTabSwitch('dashboard')}
+                style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', padding: '0.4rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
 
-            {activeTab === 'admin' && (
-              <AdminView />
-            )}
-          </>
+            <SectorAdvisoryView
+              latitude={latitude}
+              longitude={longitude}
+              locationName={currentLocation}
+            />
+          </div>
+        )}
+
+        {/* TAB 5: CLIMATE TRENDS */}
+        {activeTab === 'climate' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Historical Climate Trends & Anomalies
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  7-day observed rainfall distribution and seasonal departure norms.
+                </p>
+              </div>
+              <button
+                onClick={() => handleTabSwitch('dashboard')}
+                style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', padding: '0.4rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+
+            <ClimateTrendsView
+              latitude={latitude}
+              longitude={longitude}
+              locationName={currentLocation}
+            />
+          </div>
+        )}
+
+        {/* TAB 6: ADMIN */}
+        {activeTab === 'admin' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f8fafc' }}>
+                  Platform Operations & Health Telemetry
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
+                  Real-time system health, API latencies, provider synchronization, and feedback metrics.
+                </p>
+              </div>
+              <button
+                onClick={() => handleTabSwitch('dashboard')}
+                style={{ background: 'rgba(30, 41, 59, 0.7)', border: '1px solid rgba(255,255,255,0.1)', color: '#38bdf8', padding: '0.4rem 0.9rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem' }}
+              >
+                ← Back to Dashboard
+              </button>
+            </div>
+
+            <AdminView />
+          </div>
         )}
 
       </main>

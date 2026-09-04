@@ -124,14 +124,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           ].map((tab) => (
             <button
               key={tab.id}
+              id={`nav-btn-${tab.id}`}
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 padding: '0.45rem 0.9rem',
                 borderRadius: '8px',
-                border: 'none',
+                border: activeTab === tab.id ? '1px solid rgba(56, 189, 248, 0.4)' : '1px solid transparent',
                 background: activeTab === tab.id ? '#0284c7' : 'transparent',
                 color: activeTab === tab.id ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === tab.id ? 600 : 500,
+                fontWeight: activeTab === tab.id ? 700 : 500,
                 fontSize: '0.85rem',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease'
